@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#0f1220">
+<title>Agenda Sommeil</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f1220;
+  --surface: #161b2e;
+  --card: #1e2440;
+  --border: #2a3055;
+  --text: #e8eaf6;
+  --muted: #6b7399;
+  --accent: #7c8eff;
+  --accent2: #a78bfa;
+  --sleep: #3d5a99;
+  --sleep-light: #1e3060;
+  --green: #4ade80;
+  --orange: #fb923c;
+  --red: #f87171;
+  --gold: #fbbf24;
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bot: env(safe-area-inset-bottom, 0px);
+  --radius: 16px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-body); min-height: 100vh; overscroll-behavior: none; -webkit-font-smoothing: antialiased; }
+
+/* HEADER */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: calc(16px + var(--safe-top)) 18px 14px;
+  position: sticky; top: 0; z-index: 100;
+}
+.header-top { display: flex; align-items: center; justify-content: space-between; }
+.logo { font-family: var(--font-display); font-size: 20px; font-weight: 800; }
+.logo span { color: var(--accent); }
+.streak-pill { display: flex; align-items: center; gap: 5px; background: var(--card); border: 1px solid var(--border); padding: 5px 12px; border-radius: 20px; font-family: var(--font-mono); font-size: 11px; color: var(--gold); }
+
+/* TABS */
+.tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; position: sticky; top: 62px; z-index: 99; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { flex-shrink: 0; padding: 12px 16px; font-family: var(--font-mono); font-size: 10px; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; user-select: none; white-space: nowrap; letter-spacing: 0.5px; }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* PANEL */
+.panel { display: none; padding: 16px 16px calc(24px + var(--safe-bot)); }
+.panel.active { display: block; }
+
+/* CARD */
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+.card-title { font-family: var(--font-display); font-size: 13px; font-weight: 700; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; margin-bottom: 14px; }
+
+/* FORM */
+.form-group { margin-bottom: 13px; }
+label { display: block; font-family: var(--font-mono); font-size: 9px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 5px; }
+input[type="date"], input[type="time"], input[type="number"], input[type="text"], select, textarea {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); font-family: var(--font-mono); font-size: 15px;
+  padding: 11px 13px; border-radius: 10px; outline: none;
+  transition: border-color 0.2s; -webkit-appearance: none;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+input[type="date"], input[type="time"] { color-scheme: dark; }
+textarea { resize: none; height: 70px; font-size: 13px; }
+.input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.input-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+/* QUALITÉ SELECTOR */
+.qual-selector { display: flex; gap: 6px; }
+.qual-btn { flex: 1; padding: 10px 4px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--bg); font-family: var(--font-mono); font-size: 11px; color: var(--muted); cursor: pointer; text-align: center; transition: all 0.15s; }
+.qual-btn.sel-TB { background: rgba(74,222,128,0.2); border-color: #4ade80; color: #4ade80; }
+.qual-btn.sel-B  { background: rgba(124,142,255,0.2); border-color: var(--accent); color: var(--accent); }
+.qual-btn.sel-Moy{ background: rgba(251,191,36,0.2); border-color: var(--gold); color: var(--gold); }
+.qual-btn.sel-M  { background: rgba(251,146,60,0.2); border-color: var(--orange); color: var(--orange); }
+.qual-btn.sel-TM { background: rgba(248,113,113,0.2); border-color: var(--red); color: var(--red); }
+
+/* TOGGLE MEDOC */
+.medoc-toggle { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--bg); border: 1.5px solid var(--border); border-radius: 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; }
+.medoc-toggle.taken { border-color: var(--accent); background: rgba(124,142,255,0.08); }
+.medoc-left { display: flex; align-items: center; gap: 10px; }
+.medoc-icon { font-size: 20px; }
+.medoc-name { font-size: 13px; font-weight: 500; }
+.medoc-dose { font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-top: 1px; }
+.toggle-pill { width: 42px; height: 24px; border-radius: 12px; background: var(--border); position: relative; transition: background 0.2s; flex-shrink: 0; }
+.toggle-pill.on { background: var(--accent); }
+.toggle-dot { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 9px; background: white; transition: transform 0.2s; }
+.toggle-pill.on .toggle-dot { transform: translateX(18px); }
+
+/* BTN */
+.btn-primary { width: 100%; background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; border-radius: 12px; padding: 14px; font-family: var(--font-display); font-size: 17px; font-weight: 700; color: white; cursor: pointer; transition: opacity 0.2s; letter-spacing: 1px; }
+.btn-primary:active { opacity: 0.85; transform: scale(0.99); }
+.btn-sec { width: 100%; background: transparent; border: 1.5px solid var(--border); border-radius: 12px; padding: 11px; font-family: var(--font-mono); font-size: 12px; color: var(--muted); cursor: pointer; margin-top: 8px; }
+
+/* DURÉE AFFICHAGE */
+.duration-display { text-align: center; padding: 16px; background: var(--sleep-light); border-radius: 12px; margin: 10px 0; border: 1px solid var(--sleep); }
+.duration-big { font-family: var(--font-display); font-size: 48px; font-weight: 800; color: var(--accent); line-height: 1; }
+.duration-label { font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-top: 4px; letter-spacing: 1px; }
+
+/* TIMELINE SOMMEIL */
+.timeline-wrap { position: relative; margin: 12px 0; }
+.timeline-labels { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 8px; color: var(--muted); margin-bottom: 4px; }
+.timeline-track { height: 24px; background: var(--bg); border-radius: 6px; position: relative; overflow: hidden; border: 1px solid var(--border); }
+.timeline-sleep { position: absolute; top: 0; bottom: 0; background: linear-gradient(90deg, var(--sleep), #5b7fcc); border-radius: 4px; }
+.timeline-now { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--gold); border-radius: 2px; }
+
+/* HISTORIQUE */
+.entry-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 10px; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:none} }
+.entry-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.entry-date { font-family: var(--font-display); font-size: 15px; font-weight: 700; }
+.entry-duration { font-family: var(--font-display); font-size: 20px; font-weight: 800; color: var(--accent); }
+.entry-quals { display: flex; gap: 6px; margin-bottom: 8px; }
+.qual-badge { font-family: var(--font-mono); font-size: 9px; padding: 3px 8px; border-radius: 8px; border: 1px solid; }
+.entry-medocs { display: flex; gap: 6px; flex-wrap: wrap; }
+.medoc-badge { font-family: var(--font-mono); font-size: 9px; padding: 3px 8px; border-radius: 8px; background: rgba(124,142,255,0.1); border: 1px solid rgba(124,142,255,0.3); color: var(--accent); }
+.medoc-badge.skipped { background: rgba(74,222,128,0.1); border-color: rgba(74,222,128,0.3); color: var(--green); }
+.entry-note { font-size: 11px; color: var(--muted); margin-top: 6px; font-style: italic; }
+.entry-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; }
+.entry-del:active { color: var(--red); }
+
+/* STATS */
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.stat-block { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px; text-align: center; }
+.stat-val { font-family: var(--font-display); font-size: 28px; font-weight: 800; color: var(--accent); }
+.stat-lbl { font-family: var(--font-mono); font-size: 9px; color: var(--muted); letter-spacing: 1px; margin-top: 3px; text-transform: uppercase; }
+
+/* SEVRAGE */
+.sevrage-card { background: linear-gradient(135deg, #1a1060, #0f1220); border: 1px solid #3d2d80; border-radius: 16px; padding: 18px; margin-bottom: 12px; }
+.sevrage-title { font-family: var(--font-display); font-size: 16px; font-weight: 800; margin-bottom: 4px; }
+.sevrage-sub { font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-bottom: 14px; }
+.sevrage-progress { margin-bottom: 10px; }
+.sev-label { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-bottom: 5px; }
+.sev-track { height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; }
+.sev-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+.sev-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 12px; }
+.sev-stat { text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 10px; }
+.sev-stat-val { font-family: var(--font-display); font-size: 18px; font-weight: 800; }
+.sev-stat-lbl { font-family: var(--font-mono); font-size: 8px; color: var(--muted); margin-top: 2px; letter-spacing: 0.5px; }
+
+/* CHART BARS */
+.chart-wrap { margin: 10px 0; }
+.chart-bars { display: flex; align-items: flex-end; gap: 4px; height: 80px; }
+.chart-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.chart-bar { width: 100%; border-radius: 4px 4px 0 0; transition: height 0.4s ease; min-height: 3px; }
+.chart-bar-lbl { font-family: var(--font-mono); font-size: 7px; color: var(--muted); }
+.chart-target { border-top: 1.5px dashed var(--gold); margin-top: -1px; }
+
+/* TOAST */
+.toast { position: fixed; bottom: calc(80px + var(--safe-bot)); left: 50%; transform: translateX(-50%) translateY(20px); background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 10px 20px; border-radius: 20px; font-size: 12px; font-weight: 500; opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 999; white-space: nowrap; font-family: var(--font-mono); }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <div class="logo">🌙 <span>Sommeil</span></div>
+    <div class="streak-pill">🔥 <span id="streakVal">0</span> jours</div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('saisie')">✏️ SAISIE</div>
+  <div class="tab" onclick="switchTab('historique')">📋 HISTORIQUE</div>
+  <div class="tab" onclick="switchTab('stats')">📊 STATS</div>
+  <div class="tab" onclick="switchTab('sevrage')">💊 SEVRAGE</div>
+</div>
+
+<!-- ═══ PANEL SAISIE ═══ -->
+<div class="panel active" id="panel-saisie">
+
+  <div class="card">
+    <div class="card-title">🌙 Nuit du...</div>
+    <div class="input-row">
+      <div class="form-group">
+        <label>Date début (soir)</label>
+        <input type="date" id="dateDebut">
+      </div>
+      <div class="form-group">
+        <label>Heure coucher</label>
+        <input type="time" id="heureCoucher">
+      </div>
+    </div>
+    <div class="input-row">
+      <div class="form-group">
+        <label>Date fin (matin)</label>
+        <input type="date" id="dateFin">
+      </div>
+      <div class="form-group">
+        <label>Heure lever</label>
+        <input type="time" id="heureLever">
+      </div>
+    </div>
+
+    <!-- Aperçu durée -->
+    <div class="duration-display" id="durationPreview">
+      <div class="duration-big" id="durationBig">—</div>
+      <div class="duration-label">DURÉE DE SOMMEIL</div>
+    </div>
+
+    <div class="form-group">
+      <label>Réveils nocturnes (minutes perdues)</label>
+      <input type="number" id="reveils" placeholder="0" min="0" max="300" inputmode="numeric">
+    </div>
+  </div>
+
+  <!-- QUALITÉS -->
+  <div class="card">
+    <div class="card-title">⭐ Appréciation</div>
+    <div class="form-group">
+      <label>Qualité du sommeil</label>
+      <div class="qual-selector" id="qualSommeil">
+        <div class="qual-btn" onclick="selectQual('qualSommeil','TB')">TB</div>
+        <div class="qual-btn" onclick="selectQual('qualSommeil','B')">B</div>
+        <div class="qual-btn" onclick="selectQual('qualSommeil','Moy')">Moy</div>
+        <div class="qual-btn" onclick="selectQual('qualSommeil','M')">M</div>
+        <div class="qual-btn" onclick="selectQual('qualSommeil','TM')">TM</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Qualité du réveil</label>
+      <div class="qual-selector" id="qualReveil">
+        <div class="qual-btn" onclick="selectQual('qualReveil','TB')">TB</div>
+        <div class="qual-btn" onclick="selectQual('qualReveil','B')">B</div>
+        <div class="qual-btn" onclick="selectQual('qualReveil','Moy')">Moy</div>
+        <div class="qual-btn" onclick="selectQual('qualReveil','M')">M</div>
+        <div class="qual-btn" onclick="selectQual('qualReveil','TM')">TM</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Forme dans la journée</label>
+      <div class="qual-selector" id="qualForme">
+        <div class="qual-btn" onclick="selectQual('qualForme','TB')">TB</div>
+        <div class="qual-btn" onclick="selectQual('qualForme','B')">B</div>
+        <div class="qual-btn" onclick="selectQual('qualForme','Moy')">Moy</div>
+        <div class="qual-btn" onclick="selectQual('qualForme','M')">M</div>
+        <div class="qual-btn" onclick="selectQual('qualForme','TM')">TM</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MÉDICAMENTS -->
+  <div class="card">
+    <div class="card-title">💊 Médicaments ce soir</div>
+    <div class="medoc-toggle" id="toggle-donormyl" onclick="toggleMedoc('donormyl')">
+      <div class="medoc-left">
+        <div class="medoc-icon">💊</div>
+        <div>
+          <div class="medoc-name">Donormyl</div>
+          <div class="medoc-dose">Objectif sevrage → 0 comprimé</div>
+        </div>
+      </div>
+      <div class="toggle-pill" id="pill-donormyl"><div class="toggle-dot"></div></div>
+    </div>
+    <div class="medoc-toggle" id="toggle-melatonine" onclick="toggleMedoc('melatonine')">
+      <div class="medoc-left">
+        <div class="medoc-icon">🌙</div>
+        <div>
+          <div class="medoc-name">Mélatonine 1,9mg</div>
+          <div class="medoc-dose">Objectif sevrage → 0 comprimé</div>
+        </div>
+      </div>
+      <div class="toggle-pill" id="pill-melatonine"><div class="toggle-dot"></div></div>
+    </div>
+    <div id="toggle-sieste-wrap">
+      <div class="medoc-toggle" id="toggle-sieste" onclick="toggleMedoc('sieste')">
+        <div class="medoc-left">
+          <div class="medoc-icon">😴</div>
+          <div>
+            <div class="medoc-name">Sieste dans la journée</div>
+            <div class="medoc-dose">Somnolence diurne</div>
+          </div>
+        </div>
+        <div class="toggle-pill" id="pill-sieste"><div class="toggle-dot"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTES -->
+  <div class="card">
+    <div class="card-title">📝 Remarques</div>
+    <div class="form-group">
+      <label>Notes (médicaments, événements...)</label>
+      <textarea id="notes" placeholder="Ex: sport le soir, stress, mal de tête, médicament particulier..."></textarea>
+    </div>
+  </div>
+
+  <button class="btn-primary" onclick="saveEntry()">✓ ENREGISTRER LA NUIT</button>
+
+</div>
+
+<!-- ═══ PANEL HISTORIQUE ═══ -->
+<div class="panel" id="panel-historique">
+  <div id="histList">
+    <div style="text-align:center;padding:40px;color:var(--muted);font-family:var(--font-mono);font-size:12px">
+      Aucune nuit enregistrée.<br>Commence par l'onglet ✏️ SAISIE
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PANEL STATS ═══ -->
+<div class="panel" id="panel-stats">
+  <div class="stats-grid" id="statsGrid"></div>
+  <div class="card">
+    <div class="card-title">📊 Durée de sommeil (7 derniers jours)</div>
+    <div class="chart-wrap">
+      <div class="chart-bars" id="chartBars"></div>
+      <div style="font-family:var(--font-mono);font-size:9px;color:var(--muted);margin-top:6px;text-align:center">
+        Ligne pointillée = 7h recommandées
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">💊 Nuits sans médicaments</div>
+    <div id="statsSevre"></div>
+  </div>
+</div>
+
+<!-- ═══ PANEL SEVRAGE ═══ -->
+<div class="panel" id="panel-sevrage">
+
+  <div class="sevrage-card">
+    <div class="sevrage-title">💊 Sevrage Donormyl</div>
+    <div class="sevrage-sub">Objectif : 0 comprimé / nuit</div>
+    <div class="sevrage-progress">
+      <div class="sev-label"><span>Progression du sevrage</span><span id="sevDonormylPct">0%</span></div>
+      <div class="sev-track"><div class="sev-fill" id="sevDonormylBar" style="width:0%;background:linear-gradient(90deg,#7c8eff,#a78bfa)"></div></div>
+    </div>
+    <div class="sev-stats">
+      <div class="sev-stat"><div class="sev-stat-val" id="sevDonSans" style="color:#4ade80">0</div><div class="sev-stat-lbl">NUITS SANS</div></div>
+      <div class="sev-stat"><div class="sev-stat-val" id="sevDonAvec" style="color:#f87171">0</div><div class="sev-stat-lbl">NUITS AVEC</div></div>
+      <div class="sev-stat"><div class="sev-stat-val" id="sevDonStreak" style="color:#fbbf24">0</div><div class="sev-stat-lbl">SÉRIE EN COURS</div></div>
+    </div>
+  </div>
+
+  <div class="sevrage-card" style="background:linear-gradient(135deg,#0f2040,#0f1220);border-color:#1e4060">
+    <div class="sevrage-title">🌙 Sevrage Mélatonine 1,9mg</div>
+    <div class="sevrage-sub">Objectif : 0 comprimé / nuit</div>
+    <div class="sevrage-progress">
+      <div class="sev-label"><span>Progression du sevrage</span><span id="sevMelaPct">0%</span></div>
+      <div class="sev-track"><div class="sev-fill" id="sevMelaBar" style="width:0%;background:linear-gradient(90deg,#60a5fa,#a78bfa)"></div></div>
+    </div>
+    <div class="sev-stats">
+      <div class="sev-stat"><div class="sev-stat-val" id="sevMelaSans" style="color:#4ade80">0</div><div class="sev-stat-lbl">NUITS SANS</div></div>
+      <div class="sev-stat"><div class="sev-stat-val" id="sevMelaAvec" style="color:#f87171">0</div><div class="sev-stat-lbl">NUITS AVEC</div></div>
+      <div class="sev-stat"><div class="sev-stat-val" id="sevMelaStreak" style="color:#fbbf24">0</div><div class="sev-stat-lbl">SÉRIE EN COURS</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📅 Calendrier du sevrage</div>
+    <div id="sevrageCalendar"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">💡 Conseils sevrage</div>
+    <div style="font-family:var(--font-body);font-size:13px;color:var(--muted);line-height:1.8">
+      <p style="margin-bottom:8px">🌿 <strong style="color:var(--text)">Mélatonine</strong> — peut être arrêtée progressivement. Essaie une nuit sur deux sans.</p>
+      <p style="margin-bottom:8px">💊 <strong style="color:var(--text)">Donormyl</strong> — antihistaminique. Réduis par demi-comprimé toutes les 2 semaines.</p>
+      <p style="margin-bottom:8px">🕐 <strong style="color:var(--text)">Hygiène du sommeil</strong> — coucher/lever à heures fixes, même le weekend.</p>
+      <p>🚫 <strong style="color:var(--text)">Éviter</strong> — écrans 1h avant, caféine après 14h, alcool.</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══ DATA ═══
+let entries = JSON.parse(localStorage.getItem('sommeil_v1') || '[]');
+let form = { qualSommeil: null, qualReveil: null, qualForme: null, donormyl: false, melatonine: false, sieste: false };
+
+function saveData() { localStorage.setItem('sommeil_v1', JSON.stringify(entries)); }
+
+// ═══ INIT ═══
+function init() {
+  const now = new Date();
+  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+  document.getElementById('dateDebut').value = yesterday.toISOString().split('T')[0];
+  document.getElementById('dateFin').value = now.toISOString().split('T')[0];
+  document.getElementById('heureCoucher').value = '22:30';
+  document.getElementById('heureLever').value = '06:30';
+  updateDurationPreview();
+
+  // Live preview
+  ['heureCoucher','heureLever','dateDebut','dateFin'].forEach(id => {
+    document.getElementById(id).addEventListener('change', updateDurationPreview);
+  });
+}
+
+// ═══ TABS ═══
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['saisie','historique','stats','sevrage'][i] === name));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-'+name));
+  if (name === 'historique') renderHistorique();
+  if (name === 'stats') renderStats();
+  if (name === 'sevrage') renderSevrage();
+}
+
+// ═══ DURÉE ═══
+function calcDuration(dateDebut, heureCoucher, dateFin, heureLever) {
+  if (!dateDebut || !heureCoucher || !dateFin || !heureLever) return null;
+  const start = new Date(dateDebut + 'T' + heureCoucher);
+  const end   = new Date(dateFin   + 'T' + heureLever);
+  const diff = (end - start) / 60000; // minutes
+  if (diff <= 0 || diff > 1440) return null;
+  return diff;
+}
+
+function fmtDuration(minutes) {
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  return `${h}h${m > 0 ? String(m).padStart(2,'0') : '00'}`;
+}
+
+function updateDurationPreview() {
+  const d = calcDuration(
+    document.getElementById('dateDebut').value,
+    document.getElementById('heureCoucher').value,
+    document.getElementById('dateFin').value,
+    document.getElementById('heureLever').value
+  );
+  const reveils = parseInt(document.getElementById('reveils')?.value || 0);
+  const net = d ? Math.max(d - reveils, 0) : null;
+  document.getElementById('durationBig').textContent = net ? fmtDuration(net) : '—';
+}
+
+// ═══ QUALITÉ ═══
+function selectQual(groupId, val) {
+  form[groupId] = val;
+  document.querySelectorAll(`#${groupId} .qual-btn`).forEach(btn => {
+    btn.className = 'qual-btn';
+    if (btn.textContent === val) btn.classList.add('sel-'+val);
+  });
+}
+
+// ═══ MEDOCS ═══
+function toggleMedoc(id) {
+  form[id] = !form[id];
+  const pill = document.getElementById('pill-'+id);
+  const toggle = document.getElementById('toggle-'+id);
+  pill.classList.toggle('on', form[id]);
+  toggle.classList.toggle('taken', form[id]);
+}
+
+// ═══ SAVE ═══
+function saveEntry() {
+  const dateDebut = document.getElementById('dateDebut').value;
+  const heureCoucher = document.getElementById('heureCoucher').value;
+  const dateFin = document.getElementById('dateFin').value;
+  const heureLever = document.getElementById('heureLever').value;
+  const reveils = parseInt(document.getElementById('reveils').value || 0);
+  const notes = document.getElementById('notes').value.trim();
+
+  if (!dateDebut || !heureCoucher || !dateFin || !heureLever) {
+    showToast('⚠ Remplis les dates et heures'); return;
+  }
+
+  const dureeMin = calcDuration(dateDebut, heureCoucher, dateFin, heureLever);
+  if (!dureeMin) { showToast('⚠ Heures invalides'); return; }
+  const dureeNette = Math.max(dureeMin - reveils, 0);
+
+  const entry = {
+    id: Date.now(),
+    dateDebut, heureCoucher, dateFin, heureLever,
+    dureeMin, dureeNette, reveils,
+    qualSommeil: form.qualSommeil,
+    qualReveil: form.qualReveil,
+    qualForme: form.qualForme,
+    donormyl: form.donormyl,
+    melatonine: form.melatonine,
+    sieste: form.sieste,
+    notes
+  };
+
+  entries.unshift(entry);
+  saveData();
+  showToast('✓ Nuit enregistrée — ' + fmtDuration(dureeNette));
+
+  // Reset
+  form = { qualSommeil: null, qualReveil: null, qualForme: null, donormyl: false, melatonine: false, sieste: false };
+  document.querySelectorAll('.qual-btn').forEach(b => b.className = 'qual-btn');
+  ['donormyl','melatonine','sieste'].forEach(id => {
+    document.getElementById('pill-'+id)?.classList.remove('on');
+    document.getElementById('toggle-'+id)?.classList.remove('taken');
+  });
+  document.getElementById('notes').value = '';
+  document.getElementById('reveils').value = '';
+
+  if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+}
+
+// ═══ HISTORIQUE ═══
+function renderHistorique() {
+  const list = document.getElementById('histList');
+  if (entries.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-family:var(--font-mono);font-size:12px">Aucune nuit enregistrée.</div>';
+    return;
+  }
+
+  list.innerHTML = entries.map(e => {
+    const qualColor = (q) => {
+      const map = { TB:'#4ade80', B:'#7c8eff', Moy:'#fbbf24', M:'#fb923c', TM:'#f87171' };
+      return map[q] || '#6b7399';
+    };
+
+    const medBadges = [
+      e.donormyl ? `<span class="medoc-badge">💊 Donormyl</span>` : `<span class="medoc-badge skipped">✓ Sans Donormyl</span>`,
+      e.melatonine ? `<span class="medoc-badge">🌙 Mélatonine</span>` : `<span class="medoc-badge skipped">✓ Sans Mélatonine</span>`,
+      e.sieste ? `<span class="medoc-badge">😴 Sieste</span>` : '',
+    ].filter(Boolean).join('');
+
+    const qualBadges = [
+      e.qualSommeil ? `<span class="qual-badge" style="color:${qualColor(e.qualSommeil)};border-color:${qualColor(e.qualSommeil)}40">🌙 ${e.qualSommeil}</span>` : '',
+      e.qualReveil  ? `<span class="qual-badge" style="color:${qualColor(e.qualReveil)};border-color:${qualColor(e.qualReveil)}40">☀️ ${e.qualReveil}</span>` : '',
+      e.qualForme   ? `<span class="qual-badge" style="color:${qualColor(e.qualForme)};border-color:${qualColor(e.qualForme)}40">⚡ ${e.qualForme}</span>` : '',
+    ].filter(Boolean).join('');
+
+    const dColor = e.dureeNette >= 420 ? '#4ade80' : e.dureeNette >= 360 ? '#fbbf24' : '#f87171';
+
+    return `<div class="entry-card">
+      <div class="entry-header">
+        <div>
+          <div class="entry-date">Nuit du ${fmtDate(e.dateDebut)}</div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">${e.heureCoucher} → ${e.heureLever}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="entry-duration" style="color:${dColor}">${fmtDuration(e.dureeNette)}</div>
+          <button class="entry-del" onclick="deleteEntry(${e.id})">✕</button>
+        </div>
+      </div>
+      ${qualBadges ? `<div class="entry-quals">${qualBadges}</div>` : ''}
+      <div class="entry-medocs">${medBadges}</div>
+      ${e.notes ? `<div class="entry-note">${e.notes}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function deleteEntry(id) {
+  if (!confirm('Supprimer cette nuit ?')) return;
+  entries = entries.filter(e => e.id !== id);
+  saveData(); renderHistorique();
+}
+
+// ═══ STATS ═══
+function renderStats() {
+  const last7 = entries.slice(0, 7);
+  const avgDuree = last7.length > 0 ? last7.reduce((s,e) => s+e.dureeNette, 0) / last7.length : 0;
+  const sansD = entries.filter(e => !e.donormyl).length;
+  const sansM = entries.filter(e => !e.melatonine).length;
+  const streak = calcStreak();
+
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-block">
+      <div class="stat-val" style="color:${avgDuree>=420?'#4ade80':avgDuree>=360?'#fbbf24':'#f87171'}">${avgDuree>0?fmtDuration(avgDuree):'—'}</div>
+      <div class="stat-lbl">Moy. 7 nuits</div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-val" style="color:#fbbf24">${streak}</div>
+      <div class="stat-lbl">Jours consécutifs</div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-val" style="color:#4ade80">${sansD}</div>
+      <div class="stat-lbl">Nuits sans Donormyl</div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-val" style="color:#60a5fa">${sansM}</div>
+      <div class="stat-lbl">Nuits sans Mélatonine</div>
+    </div>`;
+
+  // Chart barres
+  const bars = document.getElementById('chartBars');
+  const last7rev = [...last7].reverse();
+  const maxH = 80;
+  const targetMin = 420; // 7h
+  const maxVal = Math.max(...last7rev.map(e=>e.dureeNette), targetMin, 480);
+
+  bars.innerHTML = last7rev.map(e => {
+    const pct = (e.dureeNette / maxVal) * 100;
+    const col = e.dureeNette >= 420 ? '#4ade80' : e.dureeNette >= 360 ? '#fbbf24' : '#f87171';
+    return `<div class="chart-bar-wrap">
+      <div class="chart-bar" style="height:${pct}%;background:${col}88;border:1px solid ${col}"></div>
+      <div class="chart-bar-lbl">${fmtDate(e.dateDebut).split('/')[0]}/${fmtDate(e.dateDebut).split('/')[1]}</div>
+    </div>`;
+  }).join('');
+  if (last7rev.length === 0) bars.innerHTML = '<div style="color:var(--muted);font-family:var(--font-mono);font-size:10px;padding:20px">Pas encore de données</div>';
+
+  // Stats sevrage
+  const pctD = entries.length > 0 ? Math.round(sansD/entries.length*100) : 0;
+  const pctM = entries.length > 0 ? Math.round(sansM/entries.length*100) : 0;
+  document.getElementById('statsSevre').innerHTML = `
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-bottom:5px"><span>💊 Donormyl</span><span style="color:#4ade80">${pctD}% de nuits sans</span></div>
+      <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;width:${pctD}%;background:linear-gradient(90deg,#7c8eff,#4ade80);border-radius:3px;transition:width 0.5s"></div></div>
+    </div>
+    <div>
+      <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-bottom:5px"><span>🌙 Mélatonine</span><span style="color:#60a5fa">${pctM}% de nuits sans</span></div>
+      <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;width:${pctM}%;background:linear-gradient(90deg,#60a5fa,#a78bfa);border-radius:3px;transition:width 0.5s"></div></div>
+    </div>`;
+}
+
+// ═══ SEVRAGE ═══
+function renderSevrage() {
+  const sansD = entries.filter(e => !e.donormyl).length;
+  const avecD = entries.filter(e => e.donormyl).length;
+  const sansM = entries.filter(e => !e.melatonine).length;
+  const avecM = entries.filter(e => e.melatonine).length;
+  const total = entries.length;
+
+  const pctD = total > 0 ? Math.round(sansD/total*100) : 0;
+  const pctM = total > 0 ? Math.round(sansM/total*100) : 0;
+
+  document.getElementById('sevDonormylPct').textContent = pctD+'%';
+  document.getElementById('sevDonormylBar').style.width = pctD+'%';
+  document.getElementById('sevDonSans').textContent = sansD;
+  document.getElementById('sevDonAvec').textContent = avecD;
+  document.getElementById('sevDonStreak').textContent = calcStreakMedoc('donormyl');
+
+  document.getElementById('sevMelaPct').textContent = pctM+'%';
+  document.getElementById('sevMelaBar').style.width = pctM+'%';
+  document.getElementById('sevMelaSans').textContent = sansM;
+  document.getElementById('sevMelaAvec').textContent = avecM;
+  document.getElementById('sevMelaStreak').textContent = calcStreakMedoc('melatonine');
+
+  // Calendrier 30 jours
+  const cal = document.getElementById('sevrageCalendar');
+  const last30 = entries.slice(0, 30).reverse();
+  if (last30.length === 0) { cal.innerHTML = '<div style="color:var(--muted);font-family:var(--font-mono);font-size:10px">Aucune donnée</div>'; return; }
+
+  cal.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">
+    ${last30.map(e => {
+      const neitherD = !e.donormyl;
+      const neitherM = !e.melatonine;
+      const both = neitherD && neitherM;
+      const none = e.donormyl && e.melatonine;
+      const col = both ? '#4ade80' : none ? '#f87171' : '#fbbf24';
+      const day = fmtDate(e.dateDebut).split('/')[0];
+      return `<div style="width:32px;height:32px;border-radius:8px;background:${col}22;border:1.5px solid ${col}55;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:10px;color:${col}" title="${fmtDate(e.dateDebut)}">${day}</div>`;
+    }).join('')}
+  </div>
+  <div style="display:flex;gap:12px;margin-top:10px;font-family:var(--font-mono);font-size:9px;color:var(--muted)">
+    <span>🟢 Zéro médoc</span>
+    <span>🟡 Partiel</span>
+    <span>🔴 Les 2</span>
+  </div>`;
+
+  // Streak global
+  document.getElementById('streakVal').textContent = calcStreak();
+}
+
+function calcStreakMedoc(id) {
+  let streak = 0;
+  for (const e of entries) {
+    if (!e[id]) streak++;
+    else break;
+  }
+  return streak;
+}
+
+function calcStreak() {
+  let streak = 0;
+  for (const e of entries) {
+    streak++;
+  }
+  return streak;
+}
+
+// ═══ UTILS ═══
+function fmtDate(s) {
+  if (!s) return '—';
+  const [y,m,d] = s.split('-');
+  return `${d}/${m}/${y.slice(2)}`;
+}
+
+let toastTimeout;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+init();
+</script>
+</body>
+</html>
